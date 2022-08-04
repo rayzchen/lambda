@@ -51,6 +51,11 @@ NIL := λx.TRUE
 NULL := λp.p (λxy.FALSE)
 """
 
+# Iota
+# I:=λf.(f(λxyz.xz(yz)))(λxy.x)
+# SKI notation of Iota: S (S I (K S)) (K K)
+# ((I(I(I(I I))))(I(I(I(I I)))(I I)((I(I(I I)))(I(I(I(I I))))))((I(I(I I)))(I(I(I I)))))
+
 class Expression(metaclass=ABCMeta):
     @abstractmethod
     def __str__(self):
@@ -58,6 +63,10 @@ class Expression(metaclass=ABCMeta):
 
     @abstractmethod
     def free_variables(self):
+        pass
+
+    @abstractmethod
+    def bound_variables(self):
         pass
 
     @abstractmethod
@@ -85,6 +94,9 @@ class Variable(Expression):
 
     def free_variables(self):
         return {self.name}
+
+    def bound_variables(self):
+        return set()
 
     def reduce(self, to_be_reduced):
         return False
@@ -114,6 +126,9 @@ class Lambda(Expression):
     def free_variables(self):
         return self.body.free_variables() - {self.arg}
 
+    def bound_variables(self):
+        return {self.arg} | self.body.bound_variables()
+
     def reduce(self, to_be_reduced):
         modified, self.body = Reducer.betareduce(self.body, to_be_reduced)
         return modified
@@ -123,13 +138,16 @@ class Lambda(Expression):
             return False
         free = after.free_variables()
         if self.arg in free and len(free) != 26:
-            available = list(set(alpha) - free)
+            available = list(set(alpha) - free - self.body.bound_variables())
             available.append(self.arg)
             available.sort()
             idx = available.index(self.arg)
             new_var = available[idx + 1 if idx != len(available) - 1 else 0]
-            self.convert(self.arg, new_var)
+            print(f"α-converting {self.arg} to {new_var}: {self}")
+            self.body.convert(self.arg, new_var)
+            old_var = self.arg
             self.arg = new_var
+            print(f"α-converted {old_var} to {new_var}: {self}")
 
         if self.arg not in free:
             if isinstance(self.body, Variable):
@@ -141,7 +159,7 @@ class Lambda(Expression):
         return False
 
     def convert(self, before, after):
-        if not isinstance(self.body, Call):
+        if before != self.arg and after != self.arg:
             self.body.convert(before, after)
 
     def copy(self):
@@ -160,6 +178,9 @@ class Call(Expression):
 
     def free_variables(self):
         return self.func.free_variables() | self.arg.free_variables()
+
+    def bound_variables(self):
+        return self.func.bound_variables() | self.arg.bound_variables()
 
     def reduce(self, to_be_reduced):
         func_modified, self.func = Reducer.betareduce(self.func, to_be_reduced)
@@ -185,10 +206,8 @@ class Call(Expression):
         return modified
 
     def convert(self, before, after):
-        if not isinstance(self.func, Call):
-            self.func.convert(before, after)
-        if not isinstance(self.arg, Call):
-            self.arg.convert(before, after)
+        self.func.convert(before, after)
+        self.arg.convert(before, after)
 
     def copy(self):
         return Call(self.func.copy(), self.arg.copy())
