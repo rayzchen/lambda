@@ -300,27 +300,30 @@ def parse_tokens(tokens, variables):
         start, end = find_parentheses(tokens)
         tokens[start:end + 1] = [parse_tokens(tokens[start + 1:end], variables)]
 
-    if len(tokens) == 1:
+    if len(tokens) == 0:
+        print("Error: unfinished expression")
+        raise StopParse
+    elif len(tokens) == 1:
         if isinstance(tokens[0], str) and tokens[0].startswith("$") and len(tokens[0]) > 1:
             return variables[tokens[0][1:]].copy()
         if tokens[0] in alpha:
             return Variable(tokens[0])
         elif isinstance(tokens[0], str):
-            print(f"Error: Unexpected {tokens[0]!r}")
+            print(f"Error: unexpected {tokens[0]!r}")
             raise StopParse
         return tokens[0]
     elif tokens[0] == "λ":
         # Abstraction
         if "." not in tokens:
-            print("Error: Missing dot after argument list")
+            print("Error: missing dot after argument list")
             raise StopParse
         end = tokens.index(".")
         arguments = tokens[1:end]
         if len(arguments) == 0:
-            print("Error: Must specify at least 1 argument")
+            print("Error: must specify at least 1 argument")
             raise StopParse
         elif not all(x in alpha for x in arguments):
-            print(f"Error: invalid argument list f{''.join(arguments)}")
+            print(f"Error: invalid argument list {''.join(arguments)}")
             raise StopParse
         if len(arguments) == 1:
             body = parse_tokens(tokens[3:], variables)
