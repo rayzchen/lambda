@@ -55,7 +55,7 @@ std::string Abstraction::tostring() {
         body = body.substr(1, body.length() - 2);
     }
     std::ostringstream stream;
-    stream << "(λ" << Abstraction::symbol_stack[0] << '.' << body << ')';
+    stream << "(" << lambda << Abstraction::symbol_stack[0] << '.' << body << ')';
     Abstraction::symbol_stack.pop_front();
     return stream.str();
 }
@@ -128,7 +128,7 @@ std::string Application::tostring() {
     if (left.length() == 1 && right.length() == 1) {
         stream << '(' << left << ' ' << right << ')';
         return stream.str();
-    } else if (left[0] == '(' && left.substr(1, lambda.size()) != "λ") {
+    } else if (left[0] == '(' && left.substr(1, lambda.size()) != lambda) {
         if (right.length() == 1) {
             stream << left.substr(0, left.length() - 1) << ' ' << right << ')';
         } else {
@@ -388,7 +388,7 @@ void dump(std::unique_ptr<Expression>& expression, bool alternative = true) {
     for (int y = 0; y < height; y++) {
         delete[] canvas[y];
     }
-    delete canvas;
+    delete[] canvas;
 }
 
 #define L(expr) std::unique_ptr<Expression>(new Abstraction(expr))
@@ -410,7 +410,7 @@ int main(int argc, char *argv[]) {
     auto i2 = A(C(iota1), C(iota1));
     auto iota2 = A(A(C(s2), A(A(C(s2), C(i2)), A(C(k2), C(s2)))), A(C(k2), C(k2)));
 
-    auto expression = parse_string("λa.(λb.bb)(a(λb.a))");
+    auto expression = iota2->copy();
     std::cout << expression->tostring() << std::endl;
 
     bool changed = true;
