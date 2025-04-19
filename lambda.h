@@ -14,30 +14,34 @@ class Expression {
 		virtual bool reduce(std::deque<Expression*> to_be_reduced) = 0;
 		virtual bool substitute(char before, Expression *after) = 0;
 		virtual void convert(char before, char after) = 0;
+		virtual std::string tostring() const = 0;
+		friend std::ostream& operator<<(std::ostream& s, const Expression& exp);
 		virtual Expression* copy() = 0;
 };
 
 class Variable : public Expression {
 	public:
 		Variable(char name);
+		Variable(const char* name);
 		void free_variables(std::set<char> vars);
 		bool reduce(std::deque<Expression*> to_be_reduced);
 		bool substitute(char before, Expression *after);
 		void convert(char before, char after);
+		std::string tostring() const;
 		Variable* copy();
-		friend std::ostream& operator<<(std::ostream& s, const Variable& var);
 		char name;
 };
 
 class Lambda : public Expression {
 	public:
 		Lambda(char arg, Expression *body);
+		Lambda(const char* arg, Expression *body);
 		void free_variables(std::set<char> vars);
 		bool reduce(std::deque<Expression*> to_be_reduced);
 		bool substitute(char before, Expression *after);
 		void convert(char before, char after);
+		std::string tostring() const;
 		Lambda* copy();
-		friend std::ostream& operator<<(std::ostream& s, const Lambda& lam);
 		char arg;
 		Expression *body;
 };
@@ -49,9 +53,9 @@ class Call : public Expression {
 		bool reduce(std::deque<Expression*> to_be_reduced);
 		bool substitute(char before, Expression *after);
 		void convert(char before, char after);
+		std::string tostring() const;
 		Call* copy();
 		Expression* expand(bool *modified);
-		friend std::ostream& operator<<(std::ostream& s, const Call& call);
 		Expression *func;
 		Expression *arg;
 };

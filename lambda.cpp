@@ -5,10 +5,27 @@
 #include "lambda.h"
 #include <algorithm>
 
+#define V(x) new Variable(#x)
+#define L(x, b) new Lambda(#x, b)
+#define C(a, b) new Call(a, b)
+
 Expression::~Expression() {}
+
+std::ostream& operator<<(std::ostream& s, const Expression& exp) {
+	std::string str = exp.tostring();
+	if (str[0] == '(') {
+		str = str.substr(1, str.length() - 2);
+	}
+	s << str;
+	return s;
+}
 
 Variable::Variable(char name) {
 	this->name = name;
+}
+
+Variable::Variable(const char* name) {
+	this->name = name[0];
 }
 
 void Variable::free_variables(std::set<char> vars) {
@@ -34,13 +51,17 @@ Variable* Variable::copy() {
 	return new Variable(this->name);
 }
 
-std::ostream& operator<<(std::ostream& s, const Variable& var) {
-	s << var.name;
-	return s;
+std::string Variable::tostring() const {
+	return std::string(1, this->name);
 }
 
 Lambda::Lambda(char arg, Expression *body) {
 	this->arg = arg;
+	this->body = body;
+}
+
+Lambda::Lambda(const char* arg, Expression *body) {
+	this->arg = arg[0];
 	this->body = body;
 }
 
@@ -108,9 +129,12 @@ Lambda* Lambda::copy() {
 	return new Lambda(this->arg, this->body->copy());
 }
 
-std::ostream& operator<<(std::ostream& s, const Lambda& lam) {
-	s << "(λ" << lam.arg << "." << lam.body << ")";
-	return s;
+std::string Lambda::tostring() const {
+	std::string body = this->body->tostring();
+	if (body[0] == '(') {
+		body = body.substr(1, body.length() - 2);
+	}
+	return "(λ" + std::string(1, this->arg) + "." + body + ")";
 }
 
 Call::Call(Expression *func, Expression *arg) {
@@ -172,9 +196,12 @@ Call* Call::copy() {
 	return new Call(this->func->copy(), this->arg->copy());
 }
 
-std::ostream& operator<<(std::ostream& s, const Call& call) {
-	s << "(" << call.func << call.arg << ")";
-	return s;
+std::string Call::tostring() const {
+	std::string func = this->func->tostring();
+	if (func.length() == 1) {
+		func += " ";
+	}
+	return "(" + func + this->arg->tostring() + ")";
 }
 
 Expression* Call::expand(bool *modified) {
@@ -207,7 +234,7 @@ Expression* Reducer::betareduce(Expression *token, std::deque<Expression*> stack
 		bool expand_modified;
 		Expression *expanded = call->expand(&expand_modified);
 		if (expand_modified) {
-			// std::cout << "β-reducing " << Reducer::current_token << "\n";
+			std::cout << "β-reducing " << *Reducer::current_token << "\n";
 			Reducer::reduced = true;
 			*modified = true;
 			return expanded;
@@ -220,7 +247,7 @@ Expression* Reducer::betareduce(Expression *token, std::deque<Expression*> stack
 
 void Reducer::print(Expression *current) {
 	if (Reducer::reduced) {
-		std::cout << Reducer::current_token << "\n";
+		std::cout << "β-reduced to " << *Reducer::current_token << "\n";
 	}
 }
 
@@ -233,23 +260,30 @@ Expression* evaluate(Expression *token) {
 	while (modified) {
 		modified = false;
 		std::deque<Expression*> stack;
-		Expression *token = Reducer::betareduce(token, stack, &modified);
-		Reducer::current_token = token;
-		// Reducer::print(token);
+		Reducer::current_token = Reducer::betareduce(Reducer::current_token, stack, &modified);
+		Reducer::print(Reducer::current_token);
+		std::cout << stack.size() << std::endl;
 		while (stack.size()) {
 			Expression *current = stack.front();
-			bool modified = current->reduce(stack);
-			// Reducer::print(current);
+			modified = current->reduce(stack);
+			Reducer::print(current);
 			if (modified) {
 				break;
 			}
 		}
 	}
-	return token;
+	return Reducer::current_token;
 }
 
 int main(int argc, char **argv) {
-	Expression *exp = new Call(new Lambda('x', new Variable('x')), new Variable('y'));
-	Variable *result = dynamic_cast<Variable*>(evaluate(exp));
-	std::cout << *result << std::endl;
+	SetConsoleOutputCP(CP_UTF8);
+	setvbuf(stdout, nullptr, _IOFBF, 1000);
+
+	std::string test = "";
+	Expression *iota = L(f, C(C(V(f), L(x, L(y, L(z, C(C(V(x), V(z)), C(V(y), V(z))))))), L(x, L(y, V(x)))));
+	Expression *i = C(iota->copy(), iota->copy());
+	Expression *k = C(iota->copy(), C(iota->copy(), i->copy()));
+	Expression *s = C(iota->copy(), k->copy());
+	Expression *exp = C(C(s->copy(), C(C(s->copy(), i->copy()), C(k->copy(), s->copy()))), C(k->copy(), k->copy()));
+	std::cout << *evaluate(i) << std::endl;
 }
