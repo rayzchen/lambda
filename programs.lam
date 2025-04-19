@@ -1,0 +1,8 @@
+; Factorial
+λn.λf.n(λf.λn.n(f(λf.λx.n f(f x))))(λx.f)(λx.x)
+
+; Fibonacci
+λn.λf.n(λc.λa.λb.c b(λx.a (b x)))(λx.λy.x)(λx.x)f
+
+; Prime number sieve
+λx.(λy.y(y(((λz.zz)(λz.λa.λb.(b(λc.λd.d))((λc.(zzc)((λd.dd)(λd.c(dd))))(λc.λd.λe.λf.(fd)(e(ac))))))(λz.λa.λb.y(bz)))))(λy.λz.z(λa.λb.a)y)
